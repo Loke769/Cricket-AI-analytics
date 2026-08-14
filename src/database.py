@@ -3,6 +3,7 @@ DuckDB integration for Cricket AI Analytics
 Loads DataFrames into a local DuckDB file for SQL querying.
 """
 
+import os
 import duckdb
 import pandas as pd
 
@@ -11,9 +12,13 @@ DB_PATH = "data/cricket.duckdb"
 
 def init_db(db_path=DB_PATH):
     """Initialize DuckDB connection, ensuring data directory exists."""
-    # BUG: uses os without importing it -> NameError: name 'os' is not defined
+    # FIX: added missing import os; create data/ dir if missing
     if not os.path.exists("data"):
-        os.makedirs("data")
+        os.makedirs("data", exist_ok=True)
+    # ensure parent directory for db_path exists
+    db_dir = os.path.dirname(db_path)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
 
     con = duckdb.connect(db_path)
     return con
@@ -31,11 +36,11 @@ def load_dataframe(df, table_name="deliveries", db_path=DB_PATH):
 
 
 def query_db(sql, db_path=DB_PATH):
-    """Execute SQL and return DuckDB result."""
+    """Execute SQL and return results as DataFrame."""
     con = duckdb.connect(db_path)
-    result = con.execute(sql)
+    df = con.execute(sql).fetchdf()
     con.close()
-    return result
+    return df
 
 
 if __name__ == "__main__":
@@ -43,3 +48,4 @@ if __name__ == "__main__":
     dummy = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
     load_dataframe(dummy, table_name="test")
     print("DB test complete")
+    print(query_db("SELECT * FROM test;"))
