@@ -1,6 +1,6 @@
 """
 CLI for Cricket AI Analytics
-Natural language cricket queries -> OpenAI SQL -> DuckDB -> results
+Natural language cricket queries -> OpenAI SQL -> DuckDB -> clean table output
 """
 
 import argparse
@@ -16,19 +16,37 @@ def main():
     args = parser.parse_args()
 
     print(f"Question: {args.question}")
-    sql = text_to_sql(args.question)
+    try:
+        sql = text_to_sql(args.question)
+    except Exception as e:
+        print(f"Error generating SQL: {e}")
+        return
+
     print(f"Generated SQL: {sql}")
 
     con = duckdb.connect(args.db)
-    result = con.execute(sql)
+    try:
+        # FIX: use fetchall()/fetchdf() and pandas to print a clean table
+        # Previously just printed the DuckDB result object reference
+        df = con.execute(sql).fetchdf()
+        if df.empty:
+            print("No results found.")
+        else:
+            # Clean tabular display without index
+            print("\nResult:")
+            print(df.to_string(index=False))
+            print(f"\n{len(df)} rows returned.")
 
-    # BUG: prints DuckDB result object instead of actual rows
-    # User sees something like "<duckdb.duckdb.DuckDBPyConnection object ...>"
-    # instead of a clean table
-    print("Result:")
-    print(result)
+            # Also show fetchall fallback example:
+            # rows = con.execute(sql).fetchall()
+            # cols = [desc[0] for desc in con.description]
+            # for row in rows:
+            #     print(dict(zip(cols, row)))
 
-    con.close()
+    except Exception as e:
+        print(f"Query execution error: {e}")
+    finally:
+        con.close()
 
 
 if __name__ == "__main__":
