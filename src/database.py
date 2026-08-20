@@ -42,7 +42,6 @@ def query_db(sql, db_path=DB_PATH):
     con.close()
     return df
 
-
 if __name__ == "__main__":
     # quick test with dummy data
     dummy = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
